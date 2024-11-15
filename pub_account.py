@@ -1,24 +1,24 @@
-import bitcoinlib
+from bitcoinlib.keys import HDKey
+from bitcoinlib.services.services import Service
 
-# Replace with your xpub key
-xpub_key = "xxxx"
+# add your master public key here
+xpub_key = "..."
 
-# Create a view-only wallet using the xpub key
-wallet = bitcoinlib.wallets.wallet_create_or_open("view_only_wallet5", keys=xpub_key, network="bitcoin", witness_type="segwit", db_uri="sqlite:///bitcoinlib.db")
+def search_index(k: HDKey, srv: Service):
+    index = input("Index:")
+    ck = k.subkey_for_path("0/" + index)
+    print("address: " + ck.address())
 
-# Specify the number of addresses to check (e.g., first 10 addresses)
-num_addresses = 50
-addresses = []
+    balance = srv.getbalance(ck.address())
+    print("balance: " + str(balance/100000000))
 
-# Retrieve balances and addresses derived from the xpub
-print("Checking balance for the first 10 derived addresses:")
-for i in range(num_addresses):
-    address_info = wallet.key_for_path([0, i])  # Derive the address at index i
-    address = address_info.address
-    balance = wallet.balance(address_info.key_id)
-    addresses.append((address, balance))
-    print(f"Address {i}: {address}, Balance: {balance} BTC")
 
-# Optional: Print total balance across all derived addresses
-total_balance = sum(balance for _, balance in addresses)
-print(f"Total Balance: {total_balance} BTC")
+if __name__ == "__main__":
+    k = HDKey(xpub_key, network="bitcoin")
+    srv = Service()
+    while True:
+        next = input("Please choose next step: [0-search] [1-exit]")
+        if next == "0":
+            search_index(k, srv)
+        else:
+            exit()
