@@ -61,7 +61,7 @@ def aes256gcm_decode(encoded_data: bytes, passphrase: str) -> bytes:
 
 # Example usage
 if __name__ == "__main__":
-    step = input('Please type 1-encrypt 2-decrypt 3-decrypt from file:')
+    step = input('Please type [1-encrypt] [2-decrypt] [3-decrypt from file]:')
     passphrase = input('Passphrase:')
     plaintext = input('Text or file:')
 
