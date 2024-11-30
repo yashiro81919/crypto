@@ -73,7 +73,11 @@ def create_trans(srv: Service):
     # create output from output_addrs
     for output_addr in output_addrs:
         if total_output == 0 and output_addr == output_addrs[len(output_addrs) - 1]:
-            t.add_output(int(round(output_addr["balance"], 8) * 100000000) - t.calculate_fee(), output_addr["address"])
+            print("Fee per kb:", t.fee_per_kb)
+            print("Size:", t.estimate_size())
+            fee = t.calculate_fee()
+            print("Total fee:", fee)             
+            t.add_output(int(round(output_addr["balance"], 8) * 100000000) - fee, output_addr["address"])
         else:
             t.add_output(int(round(output_addr["balance"], 8) * 100000000), output_addr["address"])
     # send remnant amount back to input address
@@ -102,4 +106,4 @@ if __name__ == "__main__":
             if create_trans(srv):
                 exit()
         else:
-            exit()    
+            exit()

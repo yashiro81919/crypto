@@ -1,7 +1,8 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.services.services import Service
+import sqlite3
 
-master_public_file_path = "public"
+db_file = "main.db"
 
 def list_addresses(k: HDKey, srv: Service, page: str):
     j = int(page)
@@ -23,19 +24,39 @@ def get_utxo(srv: Service, addr: str):
         print(u)
 
 
+def choose_account(message: str, rows):
+    idx = int(input(message))
+    xpub_key = rows[idx][1]
+    return (idx, HDKey(xpub_key, network="bitcoin"))      
+
+
 if __name__ == "__main__":
-    with open(master_public_file_path, 'r') as file:
-        xpub_key = file.read()    
-    k = HDKey(xpub_key, network="bitcoin")
+    conn = sqlite3.connect(db_file)
+    c = conn.cursor()
+    c.execute("select * from t_account")
+    rows = c.fetchall()
+
+    message = "please choose account: "
+    for index, row in enumerate(rows):
+        message += "[" + str(index) + "]-" + row[0] + " "
+    message += ":"
+
     srv = Service()
+
+    idx, k = choose_account(message, rows)
     while True:
-        next = input("Please choose next step: [0-list 10 addresses] [1-search by index] [2-exit]")
-        if next == "0":
+        print("Current account: " + rows[idx][0])
+        next = input("Please choose next step: [0]-change account [1]-list 10 addresses [2]-search by index [other]-exit:")
+        if next =="0":
+            idx, k = choose_account(message, rows)   
+        elif next == "1":
             page = input("Page (start from 1):")
             list_addresses(k, srv, page)
-        elif next == "1":
+        elif next == "2":
             index = input("Index:")
             addr = search_index(k, srv, index)
             get_utxo(srv, addr)
         else:
+            c.close()
+            conn.close()
             exit()
