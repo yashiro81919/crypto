@@ -49,7 +49,7 @@ def search_index(k: HDKey):
 if __name__ == "__main__":
     k = start()
     while True:
-        next = input("Please choose next step: [0-search] [1-export] [2-exit]")
+        next = input("Please choose next step: [0]-search [1]-export [other]-exit:")
         if next == "0":
             search_index(k)
         elif next == "1":

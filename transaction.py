@@ -1,24 +1,26 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.services.services import Service
 
-# if srv.sendrawtransaction(t.raw_hex()):
-#     print("Transaction send, result: ")
-#     print(srv.results)
-# else:
-#     print("Transaction could not be send, errors: ")
-#     print(srv.errors)
-transaction_file = "transaction"
+tx_file = "tx"
 input_addrs = []
 output_addrs = []
+change_addr = {}
+fee_kb: float = 0
 total_input: float = 0
 total_output: float = 0
+total_change: float = 0
+fee_str = "-fee"
 
 def print_info():
     print("----------------------------------")
+    print("transaction fee: " + str(fee_kb/1000) + " sat/vB")
+    print("----------------------------------")
     for input_addr in input_addrs:
-        print("input addr: " + input_addr["address"] + "|" + str(input_addr["balance"]))
+        print("input addr: " + input_addr["address"] + "|" + input_addr["balance"])
     for output_addr in output_addrs:
-        print("output addr: " + output_addr["address"] + "|" + str(output_addr["balance"]))
+        print("output addr: " + output_addr["address"] + "|" + output_addr["balance"])
+    if change_addr != {}:
+        print("change addr: " + change_addr["address"] + "|" + change_addr["balance"])    
     print("----------------------------------")
 
 
@@ -29,17 +31,31 @@ def add_input(srv: Service):
     balance = srv.getbalance(addr)/100000000
     total_input += balance
 
-    input_addr = {"address": addr, "balance": balance}
+    input_addr = {"address": addr, "balance": str(balance)}
     input_addrs.append(input_addr)   
 
 
 def add_output():
     global total_output
+    global change_addr
     addr = input("output address:")
-    balance = input("amount:")
-    total_output += float(balance)
+    balance = input("amount (no value means all available amount):")
 
-    output_addr = {"address": addr, "balance": float(balance)}
+    if balance == "":
+        balance = str(round(total_input - total_output, 8)) + fee_str
+        total_output = total_input
+        change_addr = {}
+    else:
+        total_output += float(balance)
+        if (total_output >= total_input):
+            print("No enough balance to send")
+            total_output -= float(balance)
+            return
+        else:
+            change_addr["address"] = input_addrs[len(input_addrs) - 1]["address"]
+            change_addr["balance"] = str(round(total_input - total_output, 8)) + fee_str
+
+    output_addr = {"address": addr, "balance": balance}
     output_addrs.append(output_addr)
 
 
@@ -53,51 +69,46 @@ def create_trans(srv: Service):
     elif len(output_addrs) == 0:
         print("No output address")
         return False
-    elif total_output >= total_input:
-        print("No enough balance to send")
-        return False
-    
-    # calculate network fees
-    fee_kb = srv.estimatefee(5) 
     
     t = Transaction(fee_per_kb=fee_kb)
     # create input from utxos
     for input_addr in input_addrs:
         utxos = srv.getutxos(input_addr["address"])
         for u in utxos:
-            amount = u["value"]/100000000
-            total_output -= amount
-            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], compressed=False)
-            if total_output <= 0:
-                break
+            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], value=u["value"], witness_type="segwit", sequence=4294967293)
+
     # create output from output_addrs
     for output_addr in output_addrs:
-        if total_output == 0 and output_addr == output_addrs[len(output_addrs) - 1]:
-            print("Fee per kb:", t.fee_per_kb)
-            print("Size:", t.estimate_size())
-            fee = t.calculate_fee()
-            print("Total fee:", fee)             
-            t.add_output(int(round(output_addr["balance"], 8) * 100000000) - fee, output_addr["address"])
+        if fee_str in output_addr["balance"]:
+            addOutputWithFee(t, output_addr)
         else:
-            t.add_output(int(round(output_addr["balance"], 8) * 100000000), output_addr["address"])
-    # send remnant amount back to input address
-    if total_output < 0:
-        print("Fee per kb:", t.fee_per_kb)
-        print("Size:", t.estimate_size())
-        fee = t.calculate_fee()
-        print("Total fee:", fee)        
-        t.add_output(int(round(abs(total_output), 8) * 100000000) - fee, input_addrs[len(input_addrs) - 1]["address"])  
+            t.add_output(int(round(float(output_addr["balance"]), 8) * 100000000), output_addr["address"])
     
-    t.save(transaction_file)
-    print("Raw:", t.raw_hex())
+    # create output from change_addr if have
+    if change_addr != {}:
+        addOutputWithFee(t, change_addr)
+    
+    t.save(filename=tx_file)
+    print(t.raw_hex())
     return True
+
+
+def addOutputWithFee(t: Transaction, addr):
+    print("transaction size:", t.estimate_size())
+    fee = t.calculate_fee()
+    print("total fee (sats):", fee)
+    index = addr["balance"].index(fee_str)
+    amount = int(round(float(addr["balance"][:index]), 8) * 100000000)
+    t.add_output(amount - fee, addr["address"])     
 
 
 if __name__ == "__main__":
     srv = Service(min_providers=10)
+    # calculate network fees
+    fee_kb = srv.estimatefee(5)
     while True:
         print_info()
-        next = input("Please choose next step: [0-add input] [1-add output] [2-create transaction] [3-exit]")
+        next = input("Please choose next step: [0]-add input [1]-add output [2]-create transaction [3]-update fee [other]-exit:")
         if next == "0":
             add_input(srv)
         elif next == "1":
@@ -105,5 +116,8 @@ if __name__ == "__main__":
         elif next == "2":
             if create_trans(srv):
                 exit()
+        elif next == "3":
+            input_fee = input("fee (sat/vB):")
+            fee_kb = float(input_fee) * 1000
         else:
             exit()
