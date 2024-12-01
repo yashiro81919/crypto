@@ -28,8 +28,6 @@ if __name__ == "__main__":
         k = pk_obj[address]
         t.sign(keys=[k], index_n=idx)
 
-    print("Raw:", t.raw_hex())
-    t.info()
     with open(signed_raw_tx, 'w') as file:
-        file.write(signed_raw_tx)
-        print("write output to raw_tx")    
+        file.write(t.raw_hex())
+        print("write output to raw_tx:", t.raw_hex())    
