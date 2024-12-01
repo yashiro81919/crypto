@@ -75,7 +75,7 @@ def create_trans(srv: Service):
     for input_addr in input_addrs:
         utxos = srv.getutxos(input_addr["address"])
         for u in utxos:
-            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], value=u["value"], witness_type="segwit", sequence=4294967293)
+            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=u["address"], value=u["value"], witness_type="segwit", sequence=4294967293)
 
     # create output from output_addrs
     for output_addr in output_addrs:
