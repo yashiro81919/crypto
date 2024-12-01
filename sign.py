@@ -2,6 +2,7 @@ from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
 
 tx_file = "tx"
+signed_raw_tx = "raw_tx"
 
 if __name__ == "__main__":
     t = Transaction.load(filename=tx_file)
@@ -29,3 +30,6 @@ if __name__ == "__main__":
 
     print("Raw:", t.raw_hex())
     t.info()
+    with open(signed_raw_tx, 'w') as file:
+        file.write(signed_raw_tx)
+        print("write output to raw_tx")    
