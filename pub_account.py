@@ -2,7 +2,7 @@ from bitcoinlib.keys import HDKey
 from bitcoinlib.services.services import Service
 import sqlite3
 
-db_file = "main.db"
+db_file = "acc.db"
 
 def list_addresses(k: HDKey, srv: Service, page: str):
     j = int(page)
