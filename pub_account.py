@@ -1,6 +1,7 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.services.services import Service
 import sqlite3
+from conf import COIN_CONFIG
 
 db_file = "acc.db"
 
@@ -27,7 +28,11 @@ def get_utxo(srv: Service, addr: str):
 def choose_account(message: str, rows):
     idx = int(input(message))
     xpub_key = rows[idx][1]
-    return (idx, HDKey(xpub_key, network="bitcoin"))      
+    coin_name = rows[idx][2]
+    network = COIN_CONFIG[coin_name]["network"]
+    witness_type = COIN_CONFIG[coin_name]["witness_type"]
+    srv = Service(network=network)
+    return (idx, HDKey(xpub_key, network=network, witness_type=witness_type), srv)      
 
 
 if __name__ == "__main__":
@@ -41,9 +46,7 @@ if __name__ == "__main__":
         message += "[" + str(index) + "]-" + row[0] + " "
     message += ":"
 
-    srv = Service()
-
-    idx, k = choose_account(message, rows)
+    idx, k, srv = choose_account(message, rows)
     while True:
         print("Current account: " + rows[idx][0])
         next = input("Please choose next step: [0]-change account [1]-list 10 addresses [2]-search by index [other]-exit:")

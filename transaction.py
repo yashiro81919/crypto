@@ -1,5 +1,7 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.services.services import Service
+import sys
+from conf import COIN_CONFIG
 
 tx_file = "tx"
 input_addrs = []
@@ -10,6 +12,8 @@ total_input: float = 0
 total_output: float = 0
 total_change: float = 0
 fee_str = "-fee"
+network: str
+witness_type: str
 
 def print_info():
     print("----------------------------------")
@@ -70,12 +74,12 @@ def create_trans(srv: Service):
         print("No output address")
         return False
     
-    t = Transaction(fee_per_kb=fee_kb)
+    t = Transaction(fee_per_kb=fee_kb, network=network)
     # create input from utxos
     for input_addr in input_addrs:
         utxos = srv.getutxos(input_addr["address"])
         for u in utxos:
-            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=u["address"], value=u["value"], witness_type="segwit", sequence=4294967293)
+            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=u["address"], value=u["value"], witness_type=witness_type, sequence=4294967293)
 
     # create output from output_addrs
     for output_addr in output_addrs:
@@ -103,7 +107,14 @@ def addOutputWithFee(t: Transaction, addr):
 
 
 if __name__ == "__main__":
-    srv = Service(min_providers=10)
+    if len(sys.argv) == 1 or sys.argv[1] not in ('LTC', 'DOGE'):
+        coin_name = "BTC"
+    else:
+        coin_name = sys.argv[1]
+
+    network = COIN_CONFIG[coin_name]["network"]
+    witness_type = COIN_CONFIG[coin_name]["witness_type"]
+    srv = Service(min_providers=10, network=network)
     # calculate network fees
     fee_kb = srv.estimatefee(5)
     while True:

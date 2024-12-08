@@ -1,14 +1,13 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
 import aes
+import sys
+from conf import COIN_CONFIG
 
 seed_file_path = "seed"
 master_public_file_path = "public"
+coin_name: str
 hdkey_file_path = "hdkey"
-purpose = "84"
-coin = "0"
-account = "0"
-external_internal = "0"
 hdkey_detail: str
 
 def start() -> HDKey:
@@ -24,21 +23,24 @@ def start() -> HDKey:
 
     obj = Mnemonic()
     seed = obj.to_seed(words, password=password).hex()
-    k = HDKey.from_seed(seed, key_type="bip32", network="bitcoin", compressed=True, encoding=None, witness_type='segwit', multisig=False)
+    network = COIN_CONFIG[coin_name]["network"]
+    witness_type = COIN_CONFIG[coin_name]["witness_type"]
+    k = HDKey.from_seed(seed, network=network, compressed=True, encoding=None, witness_type=witness_type, multisig=False)
 
+    pub = k.subkey_for_path("m/" + COIN_CONFIG[coin_name]["purpose"] + "'/" + COIN_CONFIG[coin_name]["coin"] + "'/" + COIN_CONFIG[coin_name]["account"] + "'").public()
     # write down master public key
     with open(master_public_file_path, 'w') as file:
-        file.write(k.public_master().wif())
+        file.write(pub.wif())
 
     return k
 
 
 def search_index(k: HDKey):
     index = input("Index:")
-    ck = k.subkey_for_path("m/" + purpose + "'/" + coin + "'/" + account + "'/" + external_internal + "/" + index)
+    ck = k.subkey_for_path("m/" + COIN_CONFIG[coin_name]["purpose"] + "'/" + COIN_CONFIG[coin_name]["coin"] + "'/" + COIN_CONFIG[coin_name]["account"] + "'/" + COIN_CONFIG[coin_name]["change"] + "/" + index)
     global hdkey_detail
     hdkey_detail = ""
-    hdkey_detail += "-----------m/" + purpose + "'/" + coin + "'/" + account + "'/" + external_internal + "/" + index + "-------------------\n"
+    hdkey_detail += "-----------m/" + COIN_CONFIG[coin_name]["purpose"] + "'/" + COIN_CONFIG[coin_name]["coin"] + "'/" + COIN_CONFIG[coin_name]["account"] + "'/" + COIN_CONFIG[coin_name]["change"] + "/" + index + "-------------------\n"
     hdkey_detail += ck.wif_key() + "\n"
     hdkey_detail += ck.address() + "\n"
     hdkey_detail += ck.public_hex + "\n"
@@ -47,7 +49,12 @@ def search_index(k: HDKey):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1 or sys.argv[1] not in ('BCH', 'BSV', 'LTC', 'DOGE'):
+        coin_name = "BTC"
+    else:
+        coin_name = sys.argv[1]
     k = start()
+    print("Current coin is: [" + coin_name + "]")
     while True:
         next = input("Please choose next step: [0]-search [1]-export [other]-exit:")
         if next == "0":

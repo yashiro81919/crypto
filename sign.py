@@ -1,12 +1,23 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
+import sys
+from conf import COIN_CONFIG
 
 tx_file = "tx"
 signed_raw_tx = "raw_tx"
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1 or sys.argv[1] not in ('LTC', 'DOGE'):
+        coin_name = "BTC"
+    else:
+        coin_name = sys.argv[1]
+
+    network = COIN_CONFIG[coin_name]["network"] 
+    witness_type = COIN_CONFIG[coin_name]["witness_type"]
+
     t = Transaction.load(filename=tx_file)
-    t.witness_type = "segwit"
+    t.network = network
+    t.witness_type = witness_type
 
     # loop all input and get all addresses
     addresses = []
@@ -20,7 +31,7 @@ if __name__ == "__main__":
     pk_obj = {}
     for idx, address in enumerate(new_addresses):
         pk = input("Please wif private key for address[" + address + "]:")
-        k = Key.from_wif(pk, network="bitcoin")
+        k = Key.from_wif(pk, network=network)
         pk_obj[address] = k
         
     # sign with pk for each input   
