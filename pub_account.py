@@ -51,7 +51,7 @@ if __name__ == "__main__":
         print("Current account: " + rows[idx][0])
         next = input("Please choose next step: [0]-change account [1]-list 10 addresses [2]-search by index [other]-exit:")
         if next =="0":
-            idx, k = choose_account(message, rows)   
+            idx, k, srv = choose_account(message, rows)   
         elif next == "1":
             page = input("Page (start from 1):")
             list_addresses(k, srv, page)
