@@ -1,8 +1,8 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
 import aes
-import sys
 from conf import COIN_CONFIG
+from common import choose_coin
 
 seed_file_path = "seed"
 master_public_file_path = "public"
@@ -49,10 +49,9 @@ def search_index(k: HDKey):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1 or sys.argv[1] not in ('BCH', 'BSV', 'LTC', 'DOGE'):
-        coin_name = "BTC"
-    else:
-        coin_name = sys.argv[1]
+    coin_name = choose_coin()
+    if coin_name == "":
+        exit()
     k = start()
     print("Current coin is: [" + coin_name + "]")
     while True:

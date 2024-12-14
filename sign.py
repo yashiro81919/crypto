@@ -1,17 +1,17 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
-import sys
 from conf import COIN_CONFIG
+from common import choose_coin
 
 tx_file = "tx"
 signed_raw_tx = "raw_tx"
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1 or sys.argv[1] not in ('LTC', 'DOGE'):
-        coin_name = "BTC"
-    else:
-        coin_name = sys.argv[1]
+    coin_name = choose_coin()
+    if coin_name == "":
+        exit()
 
+    print("Current coin is: [" + coin_name + "]")
     network = COIN_CONFIG[coin_name]["network"] 
     witness_type = COIN_CONFIG[coin_name]["witness_type"]
 
