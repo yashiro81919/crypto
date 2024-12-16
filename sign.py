@@ -1,13 +1,13 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
 from conf import COIN_CONFIG
-from common import choose_coin
+import common
 
 tx_file = "tx"
 signed_raw_tx = "raw_tx"
 
 if __name__ == "__main__":
-    coin_name = choose_coin()
+    coin_name = common.choose_coin()
     if coin_name == "":
         exit()
 

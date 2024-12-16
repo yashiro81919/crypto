@@ -2,23 +2,15 @@ from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
 import aes
 from conf import COIN_CONFIG
-from common import choose_coin
+import common
 
 seed_file_path = "seed"
 master_public_file_path = "public"
 coin_name: str
-hdkey_file_path = "hdkey"
 hdkey_detail: str
+words: str
 
-def start() -> HDKey:
-    with open(seed_file_path, 'r') as file:
-        content = file.read()
-
-    # test account
-    passphrase = input("Passphrase:")
-
-    words = aes.aes256gcm_decode(bytes.fromhex(content), passphrase)
-
+def get_key() -> HDKey:
     password = input("the 25th word for seed if have:")
 
     obj = Mnemonic()
@@ -48,19 +40,25 @@ def search_index(k: HDKey):
     print(hdkey_detail)
 
 
-if __name__ == "__main__":
-    coin_name = choose_coin()
-    if coin_name == "":
-        exit()
-    k = start()
+def change_account() -> HDKey:
+    global coin_name
+    coin_name = common.choose_coin()
     print("Current coin is: [" + coin_name + "]")
+    return get_key()
+
+
+if __name__ == "__main__":
+    # load seed file
+    with open(seed_file_path, 'r') as file:
+        content = file.read()
+    passphrase = input("Passphrase:")
+    words = aes.aes256gcm_decode(bytes.fromhex(content), passphrase)    
+    k = change_account()
     while True:
-        next = input("Please choose next step: [0]-search [1]-export [other]-exit:")
+        next = input("Please choose next step: [0]-change account [1]-search [other]-exit:")
         if next == "0":
-            search_index(k)
+            k = change_account()
         elif next == "1":
-            with open(hdkey_file_path, 'w') as file:
-                file.write(hdkey_detail)
-            print("write output to hdkey")           
+            search_index(k)          
         else:
             exit()

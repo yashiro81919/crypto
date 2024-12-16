@@ -1,38 +1,56 @@
 from bitcoinlib.keys import HDKey
-from bitcoinlib.services.services import Service
 import sqlite3
 from conf import COIN_CONFIG
+import common
 
 db_file = "acc.db"
+coin_name: str
+account = 0 # always use this 0
+account_name: str
 
-def list_addresses(k: HDKey, srv: Service, page: str):
-    j = int(page)
-    for i in range(10 * (j - 1), 10 * j):
-        search_index(k, srv, str(i))
-
-
-def search_index(k: HDKey, srv: Service, i: str):
-    ck = k.subkey_for_path("0/" + i)
-
-    balance = srv.getbalance(ck.address())
-    print("|" + i + "|" + ck.address() + "|" + str(balance/100000000))
-    return ck.address() 
+def list_addresses(k: HDKey):
+    c.execute("select * from t_address where name = ?", (account_name,))
+    using_addrs = c.fetchall()
+    for using_addr in using_addrs:
+        search_index(k, str(using_addr[1]), True, False)
 
 
-def get_utxo(srv: Service, addr: str):
-    utxos = srv.getutxos(addr)
-    for u in utxos:
-        print(u)
+def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
+    ck = k.subkey_for_path(str(account) + "/" + i)
+
+    # fetch balance
+    addr = common.get_addr(coin_name, ck.address())
+    balance = addr["balance"]/100000000
+
+    # update db
+    c.execute("select count(*) from t_address where name = ? and idx = ?", (account_name, int(i)))
+    addr_row = c.fetchone()
+    if addr_row[0] == 0 and balance > 0:
+        c.execute("insert into t_address (name, idx) values (?, ?)", (account_name, int(i)))
+        conn.commit()
+    elif addr_row[0] > 0 and balance == 0:
+        c.execute("delete from t_address where name = ? and idx = ?", (account_name, int(i)))
+        conn.commit() 
+        
+    if not show_non_zero or balance > 0:
+        is_spent = "✘" if addr["is_spent"] else "✔"
+        print("|" + i + "|" + ck.address() + "|" + str(balance) + "|" + is_spent)
+
+    if show_utxo:
+        utxos = common.get_utxos(coin_name, ck.address())
+        for u in utxos:
+            print(u)
 
 
-def choose_account(message: str, rows):
+def choose_account(message: str, rows) -> tuple:
+    global coin_name
+    
     idx = int(input(message))
     xpub_key = rows[idx][1]
     coin_name = rows[idx][2]
     network = COIN_CONFIG[coin_name]["network"]
     witness_type = COIN_CONFIG[coin_name]["witness_type"]
-    srv = Service(network=network)
-    return (idx, HDKey(xpub_key, network=network, witness_type=witness_type), srv)      
+    return (idx, HDKey(xpub_key, network=network, witness_type=witness_type))      
 
 
 if __name__ == "__main__":
@@ -46,19 +64,18 @@ if __name__ == "__main__":
         message += "[" + str(index) + "]-" + row[0] + " "
     message += ":"
 
-    idx, k, srv = choose_account(message, rows)
+    idx, k = choose_account(message, rows)
     while True:
-        print("Current account: " + rows[idx][0])
-        next = input("Please choose next step: [0]-change account [1]-list 10 addresses [2]-search by index [other]-exit:")
+        account_name = rows[idx][0]
+        print("Current account: " + account_name)
+        next = input("Please choose next step: [0]-change account [1]-list using addresses [2]-search by index [other]-exit:")
         if next =="0":
-            idx, k, srv = choose_account(message, rows)   
+            idx, k = choose_account(message, rows)   
         elif next == "1":
-            page = input("Page (start from 1):")
-            list_addresses(k, srv, page)
+            list_addresses(k)
         elif next == "2":
             index = input("Index:")
-            addr = search_index(k, srv, index)
-            get_utxo(srv, addr)
+            search_index(k, index, False, True)
         else:
             c.close()
             conn.close()

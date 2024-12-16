@@ -1,23 +1,23 @@
 from bitcoinlib.transactions import Transaction
-from bitcoinlib.services.services import Service
 from conf import COIN_CONFIG
-from common import choose_coin
+import common
 
 tx_file = "tx"
 input_addrs = []
 output_addrs = []
 change_addr = {}
-fee_kb: float = 0
+fee_vb: float = 0
 total_input: float = 0
 total_output: float = 0
 total_change: float = 0
 fee_str = "-fee"
 network: str
 witness_type: str
+coin_name: str
 
 def print_info():
     print("----------------------------------")
-    print("transaction fee: " + str(fee_kb/1000) + " sat/vB")
+    print("transaction fee: " + str(fee_vb) + " sat/vB")
     print("----------------------------------")
     for input_addr in input_addrs:
         print("input addr: " + input_addr["address"] + "|" + input_addr["balance"])
@@ -28,11 +28,11 @@ def print_info():
     print("----------------------------------")
 
 
-def add_input(srv: Service):
+def add_input():
     global total_input
     addr = input("input address:")
 
-    balance = srv.getbalance(addr)/100000000
+    balance = common.get_addr(coin_name, addr)["balance"]/100000000
     total_input += balance
 
     input_addr = {"address": addr, "balance": str(balance)}
@@ -63,7 +63,7 @@ def add_output():
     output_addrs.append(output_addr)
 
 
-def create_trans(srv: Service):
+def create_trans():
     global total_output
 
     # validate input and output
@@ -74,12 +74,12 @@ def create_trans(srv: Service):
         print("No output address")
         return False
     
-    t = Transaction(fee_per_kb=fee_kb, network=network)
+    t = Transaction(fee_per_kb=fee_vb * 1000, network=network)
     # create input from utxos
     for input_addr in input_addrs:
-        utxos = srv.getutxos(input_addr["address"])
+        utxos = common.get_utxos(coin_name, input_addr["address"])
         for u in utxos:
-            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=u["address"], value=u["value"], witness_type=witness_type, sequence=4294967293)
+            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=input_addr["address"], value=u["value"], witness_type=witness_type, sequence=4294967293)
 
     # create output from output_addrs
     for output_addr in output_addrs:
@@ -107,28 +107,27 @@ def addOutputWithFee(t: Transaction, addr):
 
 
 if __name__ == "__main__":
-    coin_name = choose_coin()
+    coin_name = common.choose_coin()
     if coin_name == "":
         exit()
 
     network = COIN_CONFIG[coin_name]["network"]
     witness_type = COIN_CONFIG[coin_name]["witness_type"]
-    srv = Service(min_providers=10, network=network)
     # calculate network fees
-    fee_kb = srv.estimatefee(5)
+    fee_vb = common.get_fee(coin_name)
     print("Current coin is: [" + coin_name + "]")
     while True:
         print_info()
         next = input("Please choose next step: [0]-add input [1]-add output [2]-create transaction [3]-update fee [other]-exit:")
         if next == "0":
-            add_input(srv)
+            add_input()
         elif next == "1":
             add_output()
         elif next == "2":
-            if create_trans(srv):
+            if create_trans():
                 exit()
         elif next == "3":
             input_fee = input("fee (sat/vB):")
-            fee_kb = float(input_fee) * 1000
+            fee_vb = float(input_fee)
         else:
             exit()
