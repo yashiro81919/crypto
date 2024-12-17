@@ -23,8 +23,12 @@ def get_utxos(coin_name: str, addr: str) -> list:
         url = "https://litecoinspace.org/api/address/" + addr + "/utxo"
         response = json.loads(requests.get(url).text)
     elif coin_name == "DOGE":
-        url = "https://dogeblocks.com/api/v2/utxo/" + addr
-        response = json.loads(requests.get(url).text)
+        url = "https://api.blockcypher.com/v1/doge/main/addrs/" + addr + "?unspentOnly=1&limit=100"
+        tmp = json.loads(requests.get(url).text)
+        if "txrefs" in tmp:
+            response = tmp["txrefs"]
+        else:
+            response = []
     elif coin_name == "BCH":
         url = "https://bchblockexplorer.com/api/v2/utxo/" + addr
         response = json.loads(requests.get(url).text)
@@ -34,8 +38,10 @@ def get_utxos(coin_name: str, addr: str) -> list:
 
     utxos = []
     for utxo in response:
-        if coin_name in ("BTC", "LTC", "BCH", "DOGE"):
+        if coin_name in ("BTC", "LTC", "BCH"):
             utxos.append({"txid": utxo["txid"], "output_n": utxo["vout"], "value": int(utxo["value"])})
+        elif coin_name == "DOGE":
+            utxos.append({"txid": utxo["tx_hash"], "output_n": utxo["tx_output_n"], "value": utxo["value"]})
         elif coin_name == "BSV":
             utxos.append({"txid": utxo["tx_hash"], "output_n": utxo["tx_pos"], "value": utxo["value"]})
     return utxos
@@ -48,7 +54,7 @@ def get_addr(coin_name: str, addr: str) -> dict:
     elif coin_name == "LTC":
         url = "https://litecoinspace.org/api/address/" + addr
     elif coin_name == "DOGE":
-        url = "https://dogeblocks.com/api/v2/address/" + addr
+        url = "https://api.blockcypher.com/v1/doge/main/addrs/" + addr + "/balance"
     elif coin_name == "BCH":
         url = "https://bchblockexplorer.com/api/v2/address/" + addr
     elif coin_name == "BSV":
@@ -60,6 +66,9 @@ def get_addr(coin_name: str, addr: str) -> dict:
     if coin_name in ("BTC", "LTC"):
         balance = response["chain_stats"]["funded_txo_sum"] - response["chain_stats"]["spent_txo_sum"]
         is_spent = response["chain_stats"]["spent_txo_count"] > 0
+    elif coin_name == "DOGE":
+        balance = response["balance"]
+        is_spent = response["total_sent"] > 0
     elif coin_name in ("BCH", "DOGE"):
         balance = int(response["balance"])
         is_spent = int(response["totalSent"]) > 0
@@ -78,13 +87,16 @@ def get_fee(coin_name: str) -> float:
     elif coin_name == "LTC":
         url = "https://litecoinspace.org/api/v1/fees/recommended"
     elif coin_name == "DOGE":
-        url = "https://dogeblocks.com/api/v2/estimatefee/5"
+        url = "https://api.blockcypher.com/v1/doge/main"
     elif coin_name == "BCH":
         url = "https://bchblockexplorer.com/api/v2/estimatefee/5"
         
     if coin_name == "BSV":
         return 1 # hard code
-    elif coin_name in ("BCH", "DOGE"):
+    elif coin_name == "DOGE":
+        response = json.loads(requests.get(url).text)
+        return response['medium_fee_per_kb'] / 1000
+    elif coin_name == "BCH":
         response = json.loads(requests.get(url).text)
         return float(response["result"]) * 100000
     else:
