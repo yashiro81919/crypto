@@ -1,2 +1,4 @@
 bitcoinlib
 cryptography
+bitcash
+cashaddress

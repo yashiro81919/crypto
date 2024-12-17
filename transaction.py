@@ -1,6 +1,13 @@
 from bitcoinlib.transactions import Transaction
 from conf import COIN_CONFIG
 import common
+from bitcash import PrivateKey
+
+# 1. Bitcoin, Litecoin and Dogecoin use the "bitcoinlib"
+#    transaction file will be in .bitcoinlib folder in User folder and the name is tx
+#    copy this tx file to offline machine to sign the transaction.
+# 2. Bitcoin Cash use the "bitcash" and only support send from one address
+#    transaction file will be in current folder and the name is tx_bch
 
 tx_file = "tx"
 input_addrs = []
@@ -63,16 +70,8 @@ def add_output():
     output_addrs.append(output_addr)
 
 
-def create_trans():
+def create_tx():
     global total_output
-
-    # validate input and output
-    if len(input_addrs) == 0:
-        print("No input address")
-        return False
-    elif len(output_addrs) == 0:
-        print("No output address")
-        return False
     
     t = Transaction(fee_per_kb=fee_vb * 1000, network=network)
     # create input from utxos
@@ -86,7 +85,7 @@ def create_trans():
         if fee_str in output_addr["balance"]:
             addOutputWithFee(t, output_addr)
         else:
-            t.add_output(int(round(float(output_addr["balance"]), 8) * 100000000), output_addr["address"])
+            t.add_output(get_amount(output_addr), output_addr["address"])
     
     # create output from change_addr if have
     if change_addr != {}:
@@ -94,22 +93,45 @@ def create_trans():
     
     t.save(filename=tx_file)
     print(t.raw_hex())
-    return True
 
 
-def addOutputWithFee(t: Transaction, addr):
+def addOutputWithFee(t: Transaction, addr: dict):
     print("transaction size:", t.estimate_size())
     fee = t.calculate_fee()
     print("total fee (sats):", fee)
-    index = addr["balance"].index(fee_str)
-    amount = int(round(float(addr["balance"][:index]), 8) * 100000000)
-    t.add_output(amount - fee, addr["address"])     
+    amount = get_amount(addr)
+    t.add_output(amount - fee, addr["address"])
+
+
+def create_tx_bch():
+    input_addr = input_addrs[0]
+    bch_outputs = []
+    for output_addr in output_addrs:
+        amt = get_amount(output_addr)
+        bch_outputs.append((get_cash_addr(output_addr["address"]), amt, "satoshi"))
+    leftover = get_cash_addr(change_addr["address"]) if change_addr != {} else None
+    tx_data = PrivateKey.prepare_transaction(address=get_cash_addr(input_addr["address"]), outputs=bch_outputs, fee=fee_vb, leftover=leftover)
+    with open(tx_file + "_bch", 'w') as file:
+        file.write(tx_data)
+
+
+def get_cash_addr(address: str) -> str:
+    if not address.startswith("bitcoincash:"):
+        return "bitcoincash:" + address
+    return address
+
+
+def get_amount(addr: dict) -> int:
+    if fee_str in addr["balance"]:
+        index = addr["balance"].index(fee_str)
+        amount = int(round(float(addr["balance"][:index]), 8) * 100000000)
+    else:
+        amount = int(round(float(addr["balance"]), 8) * 100000000)
+    return amount
 
 
 if __name__ == "__main__":
     coin_name = common.choose_coin()
-    if coin_name == "":
-        exit()
 
     network = COIN_CONFIG[coin_name]["network"]
     witness_type = COIN_CONFIG[coin_name]["witness_type"]
@@ -120,11 +142,23 @@ if __name__ == "__main__":
         print_info()
         next = input("Please choose next step: [0]-add input [1]-add output [2]-create transaction [3]-update fee [other]-exit:")
         if next == "0":
-            add_input()
+            if coin_name == 'BCH' and len(input_addrs) > 0:
+                print("Bitcoin Cash only support one input address")
+            else:
+                add_input()
         elif next == "1":
             add_output()
         elif next == "2":
-            if create_trans():
+            # validate input and output
+            if len(input_addrs) == 0:
+                print("No input address")
+            elif len(output_addrs) == 0:
+                print("No output address")
+            else:       
+                if coin_name in ("BTC", "LTC", "DOGE"):
+                    create_tx()
+                elif coin_name == "BCH":
+                    create_tx_bch()
                 exit()
         elif next == "3":
             input_fee = input("fee (sat/vB):")

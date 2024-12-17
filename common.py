@@ -30,19 +30,19 @@ def get_utxos(coin_name: str, addr: str) -> list:
         else:
             response = []
     elif coin_name == "BCH":
-        url = "https://bchblockexplorer.com/api/v2/utxo/" + addr
-        response = json.loads(requests.get(url).text)
+        url = "https://api.fullstack.cash/v5/electrumx/utxos/" + addr
+        response = json.loads(requests.get(url).text)["utxos"]
     elif coin_name == "BSV":
         url = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/unspent/all"
         response = json.loads(requests.get(url).text)["result"]
 
     utxos = []
     for utxo in response:
-        if coin_name in ("BTC", "LTC", "BCH"):
-            utxos.append({"txid": utxo["txid"], "output_n": utxo["vout"], "value": int(utxo["value"])})
+        if coin_name in ("BTC", "LTC"):
+            utxos.append({"txid": utxo["txid"], "output_n": utxo["vout"], "value": utxo["value"]})
         elif coin_name == "DOGE":
             utxos.append({"txid": utxo["tx_hash"], "output_n": utxo["tx_output_n"], "value": utxo["value"]})
-        elif coin_name == "BSV":
+        elif coin_name in ("BCH", "BSV"):
             utxos.append({"txid": utxo["tx_hash"], "output_n": utxo["tx_pos"], "value": utxo["value"]})
     return utxos
 
@@ -56,7 +56,7 @@ def get_addr(coin_name: str, addr: str) -> dict:
     elif coin_name == "DOGE":
         url = "https://api.blockcypher.com/v1/doge/main/addrs/" + addr + "/balance"
     elif coin_name == "BCH":
-        url = "https://bchblockexplorer.com/api/v2/address/" + addr
+        url = "https://api.fullstack.cash/v5/electrumx/balance/" + addr
     elif coin_name == "BSV":
         url = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/confirmed/balance"
 
@@ -69,9 +69,9 @@ def get_addr(coin_name: str, addr: str) -> dict:
     elif coin_name == "DOGE":
         balance = response["balance"]
         is_spent = response["total_sent"] > 0
-    elif coin_name in ("BCH", "DOGE"):
-        balance = int(response["balance"])
-        is_spent = int(response["totalSent"]) > 0
+    elif coin_name == "BCH":
+        balance = response["balance"]["confirmed"]
+        is_spent = True
     elif coin_name == "BSV":
         balance = response["confirmed"]
         url1 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/used"
@@ -89,16 +89,13 @@ def get_fee(coin_name: str) -> float:
     elif coin_name == "DOGE":
         url = "https://api.blockcypher.com/v1/doge/main"
     elif coin_name == "BCH":
-        url = "https://bchblockexplorer.com/api/v2/estimatefee/5"
+        url = "https://bchmempool.cash/api/v1/fees/recommended"
         
     if coin_name == "BSV":
         return 1 # hard code
     elif coin_name == "DOGE":
         response = json.loads(requests.get(url).text)
         return response['medium_fee_per_kb'] / 1000
-    elif coin_name == "BCH":
-        response = json.loads(requests.get(url).text)
-        return float(response["result"]) * 100000
     else:
         response = json.loads(requests.get(url).text)
         return response["fastestFee"]

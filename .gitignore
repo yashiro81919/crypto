@@ -166,4 +166,5 @@ seed
 new_seed
 public
 acc.db
-raw_tx
+signed_tx
+tx*
