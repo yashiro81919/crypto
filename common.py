@@ -49,35 +49,40 @@ def get_utxos(coin_name: str, addr: str) -> list:
 
 def get_addr(coin_name: str, addr: str) -> dict:
     url: str
-    if coin_name == "BTC":
-        url = "https://mempool.space/api/address/" + addr
-    elif coin_name == "LTC":
-        url = "https://litecoinspace.org/api/address/" + addr
-    elif coin_name == "DOGE":
-        url = "https://api.blockcypher.com/v1/doge/main/addrs/" + addr + "/balance"
-    elif coin_name == "BCH":
-        url = "https://api.fullstack.cash/v5/electrumx/balance/" + addr
-    elif coin_name == "BSV":
-        url = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/confirmed/balance"
-
-    response = json.loads(requests.get(url).text)
+    response: dict
     balance: int
+    un_balance: int
     is_spent: bool
+
     if coin_name in ("BTC", "LTC"):
+        url = "https://mempool.space/api/address/" + addr if coin_name == "BTC" else "https://litecoinspace.org/api/address/" + addr
+        response = json.loads(requests.get(url).text)
         balance = response["chain_stats"]["funded_txo_sum"] - response["chain_stats"]["spent_txo_sum"]
+        un_balance = response["mempool_stats"]["funded_txo_sum"] - response["mempool_stats"]["spent_txo_sum"]
         is_spent = response["chain_stats"]["spent_txo_count"] > 0
     elif coin_name == "DOGE":
+        url = "https://api.blockcypher.com/v1/doge/main/addrs/" + addr + "/balance"
+        response = json.loads(requests.get(url).text)
         balance = response["balance"]
+        un_balance = response["unconfirmed_balance"]
         is_spent = response["total_sent"] > 0
     elif coin_name == "BCH":
-        balance = response["balance"]["confirmed"]
-        is_spent = True
+        url = "https://explorer.melroy.org/api/address/" + addr
+        response = json.loads(requests.get(url).text)
+        balance = response["chain_stats"]["funded_txo_sum"] - response["chain_stats"]["spent_txo_sum"]
+        un_balance = response["mempool_stats"]["funded_txo_sum"] - response["mempool_stats"]["spent_txo_sum"]
+        is_spent = balance == 0 and response["chain_stats"]["tx_count"] > 0
     elif coin_name == "BSV":
+        url = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/confirmed/balance"
+        response = json.loads(requests.get(url).text)
         balance = response["confirmed"]
-        url1 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/used"
+        url1 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/unconfirmed/balance"
         response1 = json.loads(requests.get(url1).text)
-        is_spent = True if response1 == "true" else False
-    return {"balance": balance, "is_spent": is_spent}
+        un_balance = response1["unconfirmed"]
+        url2 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/used"
+        response2 = json.loads(requests.get(url2).text)
+        is_spent = True if response2 == "true" else False
+    return {"balance": balance, "un_balance": un_balance, "is_spent": is_spent}
 
 
 def get_fee(coin_name: str) -> float:
@@ -89,7 +94,7 @@ def get_fee(coin_name: str) -> float:
     elif coin_name == "DOGE":
         url = "https://api.blockcypher.com/v1/doge/main"
     elif coin_name == "BCH":
-        url = "https://bchmempool.cash/api/v1/fees/recommended"
+        url = "https://explorer.melroy.org/api/v1/fees/recommended"
         
     if coin_name == "BSV":
         return 1 # hard code

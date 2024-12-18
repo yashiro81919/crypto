@@ -108,6 +108,7 @@ def create_tx_bch():
     bch_outputs = []
     for output_addr in output_addrs:
         amt = get_amount(output_addr)
+        amt -= 1000 # cannot get the exact fee, so deduct 1000 to make sure no error when creating transaction
         bch_outputs.append((get_cash_addr(output_addr["address"]), amt, "satoshi"))
     leftover = get_cash_addr(change_addr["address"]) if change_addr != {} else None
     tx_data = PrivateKey.prepare_transaction(address=get_cash_addr(input_addr["address"]), outputs=bch_outputs, fee=fee_vb, leftover=leftover)

@@ -22,18 +22,19 @@ def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
     # fetch balance
     addr = common.get_addr(coin_name, ck.address())
     balance = addr["balance"]/100000000
+    un_balance = addr["un_balance"]/100000000
 
     # update db
     c.execute("select count(*) from t_address where name = ? and idx = ?", (account_name, int(i)))
     addr_row = c.fetchone()
-    if addr_row[0] == 0 and balance > 0:
+    if addr_row[0] == 0 and (balance + un_balance) > 0:
         c.execute("insert into t_address (name, idx) values (?, ?)", (account_name, int(i)))
         conn.commit()
-    elif addr_row[0] > 0 and balance == 0:
+    elif addr_row[0] > 0 and (balance + un_balance) == 0:
         c.execute("delete from t_address where name = ? and idx = ?", (account_name, int(i)))
         conn.commit() 
         
-    if not show_non_zero or balance > 0:
+    if not show_non_zero or (balance + un_balance) > 0:
         is_spent = "✘" if addr["is_spent"] else "✔"
         if coin_name == "BCH":
             address = cashaddress.convert.to_cash_address(ck.address())
