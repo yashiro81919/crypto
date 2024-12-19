@@ -67,11 +67,11 @@ def get_addr(coin_name: str, addr: str) -> dict:
         un_balance = response["unconfirmed_balance"]
         is_spent = response["total_sent"] > 0
     elif coin_name == "BCH":
-        url = "https://explorer.melroy.org/api/address/" + addr
+        url = "https://api.fullstack.cash/v5/electrumx/balance/" + addr
         response = json.loads(requests.get(url).text)
-        balance = response["chain_stats"]["funded_txo_sum"] - response["chain_stats"]["spent_txo_sum"]
-        un_balance = response["mempool_stats"]["funded_txo_sum"] - response["mempool_stats"]["spent_txo_sum"]
-        is_spent = balance == 0 and response["chain_stats"]["tx_count"] > 0
+        balance = response["balance"]["confirmed"]
+        un_balance = response["balance"]["unconfirmed"]
+        is_spent = False # BCH API don't have this information, so hardcode to False
     elif coin_name == "BSV":
         url = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/confirmed/balance"
         response = json.loads(requests.get(url).text)
@@ -93,10 +93,8 @@ def get_fee(coin_name: str) -> float:
         url = "https://litecoinspace.org/api/v1/fees/recommended"
     elif coin_name == "DOGE":
         url = "https://api.blockcypher.com/v1/doge/main"
-    elif coin_name == "BCH":
-        url = "https://explorer.melroy.org/api/v1/fees/recommended"
         
-    if coin_name == "BSV":
+    if coin_name in ("BCH", "BSV"):
         return 1 # hard code
     elif coin_name == "DOGE":
         response = json.loads(requests.get(url).text)
