@@ -2,12 +2,15 @@ from bitcoinlib.transactions import Transaction
 from conf import COIN_CONFIG
 import common
 from bitcash import PrivateKey
+from bsv import Transaction as BSVTrans, TransactionInput, TransactionOutput, P2PKH
 
 # 1. Bitcoin, Litecoin and Dogecoin use the "bitcoinlib"
 #    transaction file will be in .bitcoinlib folder in User folder and the name is tx
 #    copy this tx file to offline machine to sign the transaction.
 # 2. Bitcoin Cash use the "bitcash" and only support send from one address
 #    transaction file will be in current folder and the name is tx_bch
+# 3. Bitcoin SV use the "bsv"
+#    transaction file will be in current folder and the name is tx_bsv
 
 tx_file = "tx"
 input_addrs = []
@@ -104,7 +107,7 @@ def addOutputWithFee(t: Transaction, addr: dict):
 
 
 def create_tx_bch():
-    input_addr = input_addrs[0]
+    input_addr = input_addrs[0] # bch support only one input address
     bch_outputs = []
     for output_addr in output_addrs:
         amt = get_amount(output_addr)
@@ -120,6 +123,30 @@ def get_cash_addr(address: str) -> str:
     if not address.startswith("bitcoincash:"):
         return "bitcoincash:" + address
     return address
+
+
+def create_tx_bsv():
+    t = BSVTrans()
+    # create input from utxos
+    for input_addr in input_addrs:
+        utxos = common.get_utxos(coin_name, input_addr["address"])
+        for u in utxos:
+            source_tx = common.get_raw_tx(coin_name, u["txid"])
+            t.add_input(TransactionInput(source_transaction=BSVTrans.from_hex(source_tx), source_txid=u["txid"], source_output_index=u["output_n"]))
+
+     # create output from output_addrs
+    for output_addr in output_addrs:
+        if fee_str in output_addr["balance"]:
+            t.add_output(TransactionOutput(locking_script=P2PKH().lock(output_addr["address"]), satoshis=get_amount(output_addr), change=True))  
+        else:        
+            t.add_output(TransactionOutput(locking_script=P2PKH().lock(output_addr["address"]), satoshis=get_amount(output_addr)))
+
+    # create output from change_addr if have
+    if change_addr != {}:
+        t.add_output(TransactionOutput(locking_script=P2PKH().lock(change_addr), satoshis=get_amount(change_addr), change=True))
+
+    with open(tx_file + "_bsv", 'w') as file:
+        file.write(t.hex())       
 
 
 def get_amount(addr: dict) -> int:
@@ -160,6 +187,8 @@ if __name__ == "__main__":
                     create_tx()
                 elif coin_name == "BCH":
                     create_tx_bch()
+                elif coin_name == "BSV":
+                    create_tx_bsv()
                 exit()
         elif next == "3":
             input_fee = input("fee (sat/vB):")

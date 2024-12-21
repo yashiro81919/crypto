@@ -102,3 +102,10 @@ def get_fee(coin_name: str) -> float:
     else:
         response = json.loads(requests.get(url).text)
         return response["fastestFee"]
+    
+
+def get_raw_tx(coin_name: str, tx_id: str) -> hex:
+    if coin_name == "BSV":
+        url = "https://api.whatsonchain.com/v1/bsv/main/tx/" + tx_id + "/hex"
+        response = requests.get(url).text
+        return response   

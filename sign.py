@@ -3,6 +3,7 @@ from bitcoinlib.keys import Key
 from conf import COIN_CONFIG
 import common
 from bitcash import Key as CashKey
+from bsv import Transaction as BSVTrans, PrivateKey, TransactionInput, TransactionOutput, P2PKH
 
 tx_file = "tx"
 signed_tx = "signed_tx"
@@ -54,6 +55,22 @@ def sign_bch():
         print(tx_hex)
 
 
+def sign_bsv():
+    with open(tx_file + "_bsv", 'r') as file:
+        content = file.read()
+        
+    pk = input("Please input wif private key:")
+    key = PrivateKey(pk)
+    t = BSVTrans.from_hex(content)
+    for inp in t.inputs:
+        inp.unlocking_script_template = P2PKH().unlock(key)
+
+    fee = t.estimated_size()
+    t.outputs[-1].satoshis -= fee
+    t.sign()
+    print(t.hex())
+
+
 if __name__ == "__main__":
     coin_name = common.choose_coin()
     print("Current coin is: [" + coin_name + "]")
@@ -62,3 +79,5 @@ if __name__ == "__main__":
         sign()
     elif coin_name == "BCH":
         sign_bch()
+    elif coin_name == "BSV":
+        sign_bsv()
