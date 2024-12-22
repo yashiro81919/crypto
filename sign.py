@@ -4,6 +4,7 @@ from conf import COIN_CONFIG
 import common
 from bitcash import Key as CashKey
 from bsv import Transaction as BSVTrans, PrivateKey, TransactionInput, TransactionOutput, P2PKH
+import json
 
 tx_file = "tx"
 signed_tx = "signed_tx"
@@ -50,25 +51,48 @@ def sign_bch():
     key = CashKey(pk)
     tx_hex = key.sign_transaction(content)
 
-    with open(signed_tx, 'w') as file:
+    with open(signed_tx + "_bch", 'w') as file:
         file.write(tx_hex)
         print(tx_hex)
 
 
 def sign_bsv():
     with open(tx_file + "_bsv", 'r') as file:
-        content = file.read()
-        
-    pk = input("Please input wif private key:")
-    key = PrivateKey(pk)
-    t = BSVTrans.from_hex(content)
-    for inp in t.inputs:
-        inp.unlocking_script_template = P2PKH().unlock(key)
+        content = json.load(file)
 
-    fee = t.estimated_size()
-    t.outputs[-1].satoshis -= fee
+    # loop all input and get all addresses
+    addresses = []
+    for inp in content["inputs"]:
+        addresses.append(inp["address"])
+
+    # remove duplicate
+    new_addresses = list(set(addresses))
+
+    # collect pk and associated to address
+    pk_obj = {}
+    for address in new_addresses:
+        pk = input("Please input wif private key for address[" + address + "]:")
+        k = PrivateKey(pk)
+        pk_obj[address] = k          
+        
+    t = BSVTrans()
+
+    for inp in content["inputs"]:
+        t.add_input(TransactionInput(source_transaction=BSVTrans.from_hex(inp["source_tx"]), source_txid=inp["txid"],
+            source_output_index=inp["output_n"], unlocking_script_template=P2PKH().unlock(pk_obj[inp["address"]])))
+
+    for otp in content["outputs"]:
+        if otp["amount"] != -1:
+            t.add_output(TransactionOutput(locking_script=P2PKH().lock(otp["address"]), satoshis=otp["amount"]))
+        else:
+            t.add_output(TransactionOutput(locking_script=P2PKH().lock(otp["address"]), change=True))
+
+    t.fee(model_or_fee=content["fee"] * 1000)
     t.sign()
-    print(t.hex())
+
+    with open(signed_tx + "_bsv", 'w') as file:
+        file.write(t.hex())
+        print(t.hex())    
 
 
 if __name__ == "__main__":

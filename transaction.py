@@ -2,7 +2,7 @@ from bitcoinlib.transactions import Transaction
 from conf import COIN_CONFIG
 import common
 from bitcash import PrivateKey
-from bsv import Transaction as BSVTrans, TransactionInput, TransactionOutput, P2PKH
+import json
 
 # 1. Bitcoin, Litecoin and Dogecoin use the "bitcoinlib"
 #    transaction file will be in .bitcoinlib folder in User folder and the name is tx
@@ -126,27 +126,32 @@ def get_cash_addr(address: str) -> str:
 
 
 def create_tx_bsv():
-    t = BSVTrans()
+    tx = {
+        "fee": common.get_fee(coin_name),
+        "inputs":[],
+        "outputs":[]
+    }
+
     # create input from utxos
     for input_addr in input_addrs:
         utxos = common.get_utxos(coin_name, input_addr["address"])
         for u in utxos:
             source_tx = common.get_raw_tx(coin_name, u["txid"])
-            t.add_input(TransactionInput(source_transaction=BSVTrans.from_hex(source_tx), source_txid=u["txid"], source_output_index=u["output_n"]))
+            tx["inputs"].append({"source_tx": source_tx, "txid": u["txid"], "output_n": u["output_n"], "address": input_addr["address"]})
 
      # create output from output_addrs
     for output_addr in output_addrs:
         if fee_str in output_addr["balance"]:
-            t.add_output(TransactionOutput(locking_script=P2PKH().lock(output_addr["address"]), satoshis=get_amount(output_addr), change=True))  
+            tx["outputs"].append({"address": output_addr["address"], "amount": -1})
         else:        
-            t.add_output(TransactionOutput(locking_script=P2PKH().lock(output_addr["address"]), satoshis=get_amount(output_addr)))
+            tx["outputs"].append({"address": output_addr["address"], "amount": get_amount(output_addr)})
 
     # create output from change_addr if have
     if change_addr != {}:
-        t.add_output(TransactionOutput(locking_script=P2PKH().lock(change_addr), satoshis=get_amount(change_addr), change=True))
+        tx["outputs"].append({"address": change_addr["address"], "amount": -1})
 
     with open(tx_file + "_bsv", 'w') as file:
-        file.write(t.hex())       
+        file.write(json.dumps(tx))
 
 
 def get_amount(addr: dict) -> int:
