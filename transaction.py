@@ -1,4 +1,3 @@
-from bitcoinlib.transactions import Transaction
 from conf import COIN_CONFIG
 import common
 from bitcash import PrivateKey
@@ -21,8 +20,6 @@ total_input: float = 0
 total_output: float = 0
 total_change: float = 0
 fee_str = "-fee"
-network: str
-witness_type: str
 coin_name: str
 
 def print_info():
@@ -74,36 +71,31 @@ def add_output():
 
 
 def create_tx():
-    global total_output
-    
-    t = Transaction(fee_per_kb=fee_vb * 1000, network=network)
+    tx = {
+        "fee": fee_vb,
+        "inputs":[],
+        "outputs":[]
+    }
+
     # create input from utxos
     for input_addr in input_addrs:
         utxos = common.get_utxos(coin_name, input_addr["address"])
         for u in utxos:
-            t.add_input(prev_txid=u["txid"], output_n=u["output_n"], address=input_addr["address"], value=u["value"], witness_type=witness_type, sequence=4294967293)
+            tx["inputs"].append({"txid": u["txid"], "output_n": u["output_n"], "address": input_addr["address"], "value": u["value"]})
 
     # create output from output_addrs
     for output_addr in output_addrs:
         if fee_str in output_addr["balance"]:
-            addOutputWithFee(t, output_addr)
-        else:
-            t.add_output(get_amount(output_addr), output_addr["address"])
-    
+            tx["outputs"].append({"address": output_addr["address"], "amount": get_amount(output_addr), "change": True})
+        else:        
+            tx["outputs"].append({"address": output_addr["address"], "amount": get_amount(output_addr), "change": False})
+
     # create output from change_addr if have
     if change_addr != {}:
-        addOutputWithFee(t, change_addr)
-    
-    t.save(filename=tx_file)
-    print(t.raw_hex())
+        tx["outputs"].append({"address": change_addr["address"], "amount": get_amount(output_addr), "change": True})
 
-
-def addOutputWithFee(t: Transaction, addr: dict):
-    print("transaction size:", t.estimate_size())
-    fee = t.calculate_fee()
-    print("total fee (sats):", fee)
-    amount = get_amount(addr)
-    t.add_output(amount - fee, addr["address"])
+    with open(tx_file, 'w') as file:
+        file.write(json.dumps(tx))
 
 
 def create_tx_bch():
@@ -177,8 +169,6 @@ def get_amount(addr: dict) -> int:
 if __name__ == "__main__":
     coin_name = common.choose_coin()
 
-    network = COIN_CONFIG[coin_name]["network"]
-    witness_type = COIN_CONFIG[coin_name]["witness_type"]
     # calculate network fees
     fee_vb = common.get_fee(coin_name)
     print("Current coin is: [" + coin_name + "]")
