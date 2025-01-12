@@ -107,14 +107,25 @@ def addOutputWithFee(t: Transaction, addr: dict):
 
 
 def create_tx_bch():
-    input_addr = input_addrs[0] # bch support only one input address
+    # create input, bch library support only one input address
+    input_addr = input_addrs[0]
+
+    # create output from output_addrs
     bch_outputs = []
+    leftover: str
     for output_addr in output_addrs:
         amt = get_amount(output_addr)
-        amt -= 1000 # cannot get the exact fee, so deduct 1000 to make sure no error when creating transaction
-        bch_outputs.append((get_cash_addr(output_addr["address"]), amt, "satoshi"))
-    leftover = get_cash_addr(change_addr["address"]) if change_addr != {} else None
+        if fee_str in output_addr["balance"]:
+            leftover = get_cash_addr(output_addr["address"])
+        else:        
+            bch_outputs.append((get_cash_addr(output_addr["address"]), amt, "satoshi"))
+
+    # create output from change_addr if have
+    if change_addr != {}:
+        leftover = get_cash_addr(change_addr["address"])
+
     tx_data = PrivateKey.prepare_transaction(address=get_cash_addr(input_addr["address"]), outputs=bch_outputs, fee=fee_vb, leftover=leftover)
+
     with open(tx_file + "_bch", 'w') as file:
         file.write(tx_data)
 
@@ -127,7 +138,7 @@ def get_cash_addr(address: str) -> str:
 
 def create_tx_bsv():
     tx = {
-        "fee": common.get_fee(coin_name),
+        "fee": fee_vb,
         "inputs":[],
         "outputs":[]
     }
@@ -139,7 +150,7 @@ def create_tx_bsv():
             source_tx = common.get_raw_tx(coin_name, u["txid"])
             tx["inputs"].append({"source_tx": source_tx, "txid": u["txid"], "output_n": u["output_n"], "address": input_addr["address"]})
 
-     # create output from output_addrs
+    # create output from output_addrs
     for output_addr in output_addrs:
         if fee_str in output_addr["balance"]:
             tx["outputs"].append({"address": output_addr["address"], "amount": -1})

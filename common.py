@@ -79,9 +79,8 @@ def get_addr(coin_name: str, addr: str) -> dict:
         url1 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/unconfirmed/balance"
         response1 = json.loads(requests.get(url1).text)
         un_balance = response1["unconfirmed"]
-        url2 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/used"
-        response2 = json.loads(requests.get(url2).text)
-        is_spent = True if response2 == "true" else False
+        url2 = "https://api.whatsonchain.com/v1/bsv/main/address/" + addr + "/confirmed/history"
+        is_spent = True if requests.get(url2).text != "Not Found" and balance == 0 else False
     return {"balance": balance, "un_balance": un_balance, "is_spent": is_spent}
 
 
