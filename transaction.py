@@ -4,8 +4,7 @@ from bitcash import PrivateKey
 import json
 
 # 1. Bitcoin, Litecoin and Dogecoin use the "bitcoinlib"
-#    transaction file will be in .bitcoinlib folder in User folder and the name is tx
-#    copy this tx file to offline machine to sign the transaction.
+#    transaction file will be in current folder and the name is tx
 # 2. Bitcoin Cash use the "bitcash" and only support send from one address
 #    transaction file will be in current folder and the name is tx_bch
 # 3. Bitcoin SV use the "bsv"
@@ -92,7 +91,7 @@ def create_tx():
 
     # create output from change_addr if have
     if change_addr != {}:
-        tx["outputs"].append({"address": change_addr["address"], "amount": get_amount(output_addr), "change": True})
+        tx["outputs"].append({"address": change_addr["address"], "amount": get_amount(change_addr), "change": True})
 
     with open(tx_file, 'w') as file:
         file.write(json.dumps(tx))
