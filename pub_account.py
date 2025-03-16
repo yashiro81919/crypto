@@ -2,7 +2,6 @@ from bitcoinlib.keys import HDKey
 import sqlite3
 from conf import COIN_CONFIG
 import common
-import cashaddress.convert
 
 db_file = "acc.db"
 coin_name: str
@@ -36,10 +35,7 @@ def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
         
     if not show_non_zero or (balance + un_balance) > 0:
         is_spent = "✘" if addr["is_spent"] else "✔"
-        if coin_name == "BCH":
-            address = cashaddress.convert.to_cash_address(ck.address())
-        else:
-            address = ck.address()
+        address = ck.address()
         print("|" + i + "|" + address + "|" + str(balance) + "|" + is_spent)
 
     if show_utxo:

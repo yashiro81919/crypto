@@ -1,6 +1,2 @@
 bitcoinlib
 cryptography
-bitcash
-cashaddress
-bsv-sdk
-aiohttp

@@ -1,9 +1,7 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
-import aes
 from conf import COIN_CONFIG
-import common
-import cashaddress.convert 
+import aes, common
 
 seed_file_path = "seed"
 master_public_file_path = "public"
@@ -35,11 +33,9 @@ def search_index(k: HDKey):
     hdkey_detail = ""
     hdkey_detail += "-----------m/" + COIN_CONFIG[coin_name]["purpose"] + "'/" + COIN_CONFIG[coin_name]["coin"] + "'/" + COIN_CONFIG[coin_name]["account"] + "'/" + COIN_CONFIG[coin_name]["change"] + "/" + index + "-------------------\n"
     hdkey_detail += ck.wif_key() + "\n"
-    if coin_name == "BCH":
-        hdkey_detail += cashaddress.convert.to_cash_address(ck.address()) + "\n"
-    else:
-        hdkey_detail += ck.address() + "\n"
-    hdkey_detail += ck.public_hex + "\n"
+    hdkey_detail += ck.as_hex(private=True).hex() + "\n"
+    hdkey_detail += ck.as_hex() + "\n"
+    hdkey_detail += ck.address() + "\n"
     hdkey_detail += "---------------------------------------------\n"
     print(hdkey_detail)
 
