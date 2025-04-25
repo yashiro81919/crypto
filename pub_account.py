@@ -26,6 +26,7 @@ def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
     un_balance = addr["un_balance"]/100000000
 
     # calculate total balance
+    global total
     total += balance
 
     # update db
