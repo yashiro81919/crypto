@@ -10,7 +10,7 @@ hdkey_detail: str
 words: str
 
 def get_key() -> HDKey:
-    password = input("the 25th word for seed if have:")
+    password = getpass.getpass('the 25th word for seed if have:')
 
     obj = Mnemonic()
     seed = obj.to_seed(words, password=password).hex()
