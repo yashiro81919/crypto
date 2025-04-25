@@ -7,9 +7,11 @@ db_file = "acc.db"
 coin_name: str
 account = 0 # always use this 0
 account_name: str
-total = 0
+total: float
 
 def list_addresses(k: HDKey):
+    global total
+    total = 0
     c.execute("select * from t_address where name = ?", (account_name,))
     using_addrs = c.fetchall()
     for using_addr in using_addrs:
