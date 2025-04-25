@@ -1,7 +1,7 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
 from conf import COIN_CONFIG
-import aes, common
+import aes, common, getpass
 
 seed_file_path = "seed"
 master_public_file_path = "public"
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # load seed file
     with open(seed_file_path, 'r') as file:
         content = file.read()
-    passphrase = input("Passphrase:")
+    passphrase = getpass.getpass('Passphrase:')
     words = aes.aes256gcm_decode(bytes.fromhex(content), passphrase)    
     k = change_account()
     while True:

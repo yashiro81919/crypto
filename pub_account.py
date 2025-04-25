@@ -7,12 +7,14 @@ db_file = "acc.db"
 coin_name: str
 account = 0 # always use this 0
 account_name: str
+total = 0
 
 def list_addresses(k: HDKey):
     c.execute("select * from t_address where name = ?", (account_name,))
     using_addrs = c.fetchall()
     for using_addr in using_addrs:
         search_index(k, str(using_addr[1]), True, False)
+    print('Total Balance:' + str(total))
 
 
 def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
@@ -22,6 +24,9 @@ def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
     addr = common.get_addr(coin_name, ck.address())
     balance = addr["balance"]/100000000
     un_balance = addr["un_balance"]/100000000
+
+    # calculate total balance
+    total += balance
 
     # update db
     c.execute("select count(*) from t_address where name = ? and idx = ?", (account_name, int(i)))

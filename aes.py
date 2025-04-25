@@ -2,7 +2,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-import os
+import os, getpass
 
 # Generate a key based on a passphrase and salt using PBKDF2
 def generate_key(passphrase: str, salt: bytes) -> bytes:
@@ -62,7 +62,7 @@ def aes256gcm_decode(encoded_data: bytes, passphrase: str) -> bytes:
 # Example usage
 if __name__ == "__main__":
     step = input('Please type [1]-encrypt [2]-decrypt [3]-decrypt from file:')
-    passphrase = input('Passphrase:')
+    passphrase = getpass.getpass('Passphrase:')
     plaintext = input('Text or file:')
 
     if step == "1":
