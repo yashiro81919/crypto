@@ -1,5 +1,5 @@
-# pow
-an easy crypto wallet (support POW coin) built with Python for learning purpose
+# Crypto
+an easy crypto wallet built with Python for learning purpose
 
 1.4 remove BSV and BCH support.
 1.3 support Bitcoin SV (P2PKH).
