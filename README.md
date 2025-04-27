@@ -1,5 +1,5 @@
 # crypto-wallet
-a easy crypto wallet built with Python for learning purpose
+an easy crypto wallet built with Python for learning purpose
 
 1.4 remove BSV and BCH support.
 1.3 support Bitcoin SV (P2PKH).
