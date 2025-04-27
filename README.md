@@ -1,4 +1,4 @@
-# Crypto
+# crypto
 an easy crypto wallet built with Python for learning purpose
 
 1.4 remove BSV and BCH support.
