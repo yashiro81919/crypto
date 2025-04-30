@@ -1,16 +1,16 @@
-import requests
-import json
 from conf import COIN_CONFIG
+import requests, json, aes, sqlite3, questionary
 
 def choose_coin() -> str:
     coins = []
-    message = "please choose coin: "
-    for index, row in enumerate(COIN_CONFIG):
-        message += "[" + str(index) + "]-" + row + " "
+    for idx, row in enumerate(COIN_CONFIG):
         coins.append(row)
-    message += ":"
-    idx = int(input(message))
-    return coins[idx]
+    coin_name = questionary.select("Choose coin: ", choices=coins).ask()
+    print("----------------------------------")
+    print("Current coin is: [" + coin_name + "]")
+    print("----------------------------------")
+
+    return coin_name
 
 
 def get_utxos(coin_name: str, addr: str) -> list:
@@ -75,4 +75,26 @@ def get_fee(coin_name: str) -> float:
         return response['medium_fee_per_kb'] / 1000
     else:
         response = json.loads(requests.get(url).text)
-        return response["fastestFee"] 
+        return response["fastestFee"]
+    
+
+def is_float(text):
+    try:
+        float(text)
+        return True
+    except ValueError:
+        return False
+
+
+def is_int(text):
+    try:
+        int(text)
+        return True
+    except ValueError:
+        return False
+
+
+def get_api_key(c: sqlite3.Cursor, coin_name: str):
+    c.execute("select key from t_key where name = ?", (coin_name,))
+    key_row = c.fetchone()
+    return aes.aes256gcm_decode(bytes.fromhex(key_row[0]), coin_name).decode('utf-8')     

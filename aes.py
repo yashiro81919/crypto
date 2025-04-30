@@ -2,7 +2,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-import os, getpass
+import os, questionary
 
 # Generate a key based on a passphrase and salt using PBKDF2
 def generate_key(passphrase: str, salt: bytes) -> bytes:
@@ -61,21 +61,26 @@ def aes256gcm_decode(encoded_data: bytes, passphrase: str) -> bytes:
 
 # Example usage
 if __name__ == "__main__":
-    step = input('Please type [1]-encrypt [2]-decrypt [3]-decrypt from file:')
-    passphrase = getpass.getpass('Passphrase:')
-    plaintext = input('Text or file:')
+    action1 = questionary.Choice(title="encrypt text", value=0)
+    action2 = questionary.Choice(title="decrypt from text", value=1)
+    action3 = questionary.Choice(title="decrypt from file", value=2)
+    step = questionary.select("Choose your action: ", choices=[action1, action2, action3]).ask()
+    passphrase = questionary.password("Passphrase: ", validate=lambda text: len(text) > 0).ask()
 
-    if step == "1":
+    if step == 0:
+        plaintext = questionary.text("Text to be encrypted: ", validate=lambda text: len(text) > 0).ask()
         # Encrypt the data
         encrypted_data = aes256gcm_encode(bytes(plaintext, "utf-8"), passphrase)
         print(f"Encrypted data: {encrypted_data.hex()}")
-    elif step == "2":
+    elif step == 1:
+        plaintext = questionary.text("Text to be decrypted: ", validate=lambda text: len(text) > 0).ask()
         # Decrypt the data
         decrypted_data = aes256gcm_decode(bytes.fromhex(plaintext), passphrase)
         print(f"Decrypted data: {decrypted_data}")    
-    elif step == "3":
+    elif step == 2:
+        file_name = questionary.text("File name to be decrypted: ", validate=lambda text: len(text) > 0).ask()
         # Decrypt the data from file
-        with open(plaintext, 'r') as file:
+        with open(file_name, 'r') as file:
             content = file.read()        
         decrypted_data = aes256gcm_decode(bytes.fromhex(content), passphrase)
         print(f"Decrypted data: {decrypted_data}")

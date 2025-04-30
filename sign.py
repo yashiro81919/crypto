@@ -1,8 +1,12 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
+from tronpy.tron import Transaction as TransactionTRX
+from tronpy.abi import trx_abi
 from conf import COIN_CONFIG
-import common
-import json
+import common, json, questionary
+
+# this script should be deployed on offline device for signing the transaction with your private key
+# make sure a file named "tx" has been put in the same folder which includes the transaction data created in online devices
 
 tx_file = "tx"
 signed_tx = "signed_tx"
@@ -26,7 +30,7 @@ def sign():
     # collect pk and associated to address
     pk_obj = {}
     for idx, address in enumerate(new_addresses):
-        pk = input("Please input wif private key for address[" + address + "]:")
+        pk = questionary.text("Type WIF private key for address [" + address + "]: ", validate=lambda text: len(text) > 0).ask()
         k = Key.from_wif(pk, network=network)
         pk_obj[address] = k
 
@@ -55,7 +59,24 @@ def sign():
         print(t.raw_hex())           
 
 
+def sign_trx():
+    with open(tx_file, 'r') as file:
+        content = json.load(file)
+
+    t = TransactionTRX.from_json(content)
+    ori_addr = content["raw_data"]["contract"][0]["parameter"]["value"]["owner_address"].zfill(64)
+    address = trx_abi.decode_single("address", bytes.fromhex(ori_addr))
+    pk = questionary.text("Type private key for address[" + address + "]: ", validate=lambda text: len(text) > 0).ask()
+    t.sign(pk)
+
+    with open(signed_tx, 'w') as file:
+        file.write(t.to_json())
+        print(t.to_json())   
+
+
 if __name__ == "__main__":
     coin_name = common.choose_coin()
-    print("Current coin is: [" + coin_name + "]")
-    sign()
+    if coin_name == 'TRX':
+        sign_trx()
+    else:
+        sign()

@@ -1,2 +1,4 @@
+questionary
 bitcoinlib
 cryptography
+tronpy
