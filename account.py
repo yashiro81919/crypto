@@ -1,6 +1,5 @@
 from bitcoinlib.keys import HDKey
 from bitcoinlib.mnemonic import Mnemonic
-from tronpy.keys import PrivateKey as TronPK
 from conf import COIN_CONFIG
 import aes, common, questionary
 
@@ -35,15 +34,10 @@ def search_index(k: HDKey):
     global hdkey_detail
     hdkey_detail = ""
     hdkey_detail += "-----------m/" + COIN_CONFIG[coin_name]["purpose"] + "'/" + COIN_CONFIG[coin_name]["coin"] + "'/" + COIN_CONFIG[coin_name]["account"] + "'/" + COIN_CONFIG[coin_name]["change"] + "/" + index + "-------------------\n"
-    if coin_name in ("BTC", "LTC", "DOGE"):
-        hdkey_detail += "WIF: " + ck.wif_key() + "\n"
+    hdkey_detail += "WIF: " + ck.wif_key() + "\n"
     hdkey_detail += "Private Key: " + ck.as_hex(private=True).hex() + "\n"
     hdkey_detail += "Public Key: " + ck.as_hex() + "\n"
-    if coin_name == "TRX":
-        tron_pk = TronPK.fromhex(ck.as_hex(private=True).hex())
-        hdkey_detail += "Address: " + tron_pk.public_key.to_base58check_address() + "\n"
-    else:
-        hdkey_detail += "Address: " + ck.address() + "\n"
+    hdkey_detail += "Address: " + ck.address() + "\n"
     hdkey_detail += "------------------------------------------------\n"
     print(hdkey_detail)
 

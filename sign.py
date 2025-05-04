@@ -1,7 +1,5 @@
 from bitcoinlib.transactions import Transaction
 from bitcoinlib.keys import Key
-from tronpy.tron import Transaction as TransactionTRX
-from tronpy.abi import trx_abi
 from conf import COIN_CONFIG
 import common, json, questionary
 
@@ -56,27 +54,9 @@ def sign():
 
     with open(signed_tx, 'w') as file:
         file.write(t.raw_hex())
-        print(t.raw_hex())           
-
-
-def sign_trx():
-    with open(tx_file, 'r') as file:
-        content = json.load(file)
-
-    t = TransactionTRX.from_json(content)
-    ori_addr = content["raw_data"]["contract"][0]["parameter"]["value"]["owner_address"].zfill(64)
-    address = trx_abi.decode_single("address", bytes.fromhex(ori_addr))
-    pk = questionary.text("Type private key for address[" + address + "]: ", validate=lambda text: len(text) > 0).ask()
-    t.sign(pk)
-
-    with open(signed_tx, 'w') as file:
-        file.write(t.to_json())
-        print(t.to_json())   
+        print(t.raw_hex())
 
 
 if __name__ == "__main__":
     coin_name = common.choose_coin()
-    if coin_name == 'TRX':
-        sign_trx()
-    else:
-        sign()
+    sign()

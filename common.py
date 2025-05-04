@@ -1,5 +1,5 @@
 from conf import COIN_CONFIG
-import requests, json, aes, sqlite3, questionary
+import requests, json, questionary
 
 def choose_coin() -> str:
     coins = []
@@ -92,9 +92,3 @@ def is_int(text):
         return True
     except ValueError:
         return False
-
-
-def get_api_key(c: sqlite3.Cursor, coin_name: str):
-    c.execute("select key from t_key where name = ?", (coin_name,))
-    key_row = c.fetchone()
-    return aes.aes256gcm_decode(bytes.fromhex(key_row[0]), coin_name).decode('utf-8')     

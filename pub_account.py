@@ -1,9 +1,5 @@
 from bitcoinlib.keys import HDKey
-from tronpy.keys import PublicKey as TronPK
-from tronpy import Tron
-from tronpy.providers import HTTPProvider
-from tronpy.exceptions import AddressNotFound
-from conf import COIN_CONFIG, TRON_USDT_CONTRACT, DB_FILE
+from conf import COIN_CONFIG, DB_FILE
 import sqlite3, common, questionary
 
 # this script should be deployed on online device for monitoring your accounts
@@ -13,9 +9,6 @@ coin_name: str
 account = 0 # always use this 0
 account_name: str
 total: float
-tron_client = None
-tron_usdt = None
-total_usdt: float
 
 def list_addresses(k: HDKey):
     global total
@@ -23,17 +16,9 @@ def list_addresses(k: HDKey):
     c.execute("select * from t_address where name = ?", (account_name,))
     using_addrs = c.fetchall()
 
-    if coin_name == 'TRX':
-        global total_usdt
-        total_usdt = 0
-        for using_addr in using_addrs:
-            search_index_trx(k, str(using_addr[1]), True)
-        print('Total TRX:' + str(total))
-        print('Total USDT:' + str(total_usdt))
-    else:
-        for using_addr in using_addrs:
-            search_index(k, str(using_addr[1]), True, False)
-        print('Total Balance:' + str(total))
+    for using_addr in using_addrs:
+        search_index(k, str(using_addr[1]), True, False)
+    print('Total Balance:' + str(total))
 
 
 def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
@@ -62,42 +47,6 @@ def search_index(k: HDKey, i: str, show_non_zero: bool, show_utxo: bool):
     update_db(i, balance + un_balance)
 
 
-def search_index_trx(k: HDKey, i: str, show_non_zero: bool):
-    ck = k.subkey_for_path(str(account) + "/" + i)
-    pk = TronPK.fromhex(ck.public_uncompressed_hex[2:])
-    address = pk.to_base58check_address()
-
-    try:
-        balance = float(tron_client.get_account_balance(address))
-    except AddressNotFound:
-        balance = 0.0
-
-    # USDT TRC20 token
-    precision = tron_usdt.functions.decimals()
-    usdt_bal = tron_usdt.functions.balanceOf(address) / 10 ** precision
-
-    # calculate total balance
-    if show_non_zero:
-        global total
-        total += balance
-        global total_usdt
-        total_usdt += usdt_bal    
-
-    if not show_non_zero or balance > 0 or usdt_bal > 0:
-        print("|" + i + "|" + address + "|trx: " + str(balance) + "|usdt: " + str(usdt_bal))
-
-    update_db(i, balance + usdt_bal)
-
-
-def init_tron_client():
-    global tron_client
-    global tron_usdt
-
-    api_key = common.get_api_key(c, coin_name)
-    tron_client = Tron(HTTPProvider(api_key=api_key))
-    tron_usdt = tron_client.get_contract(TRON_USDT_CONTRACT)
-
-
 def choose_account(db_accounts: list[questionary.Choice], rows: list[any]) -> tuple:
     global coin_name
     
@@ -106,9 +55,6 @@ def choose_account(db_accounts: list[questionary.Choice], rows: list[any]) -> tu
     coin_name = rows[idx][2]
     network = COIN_CONFIG[coin_name]["network"]
     witness_type = COIN_CONFIG[coin_name]["witness_type"]
-
-    if coin_name == 'TRX' and tron_client == None:
-        init_tron_client()
 
     return (idx, HDKey(xpub_key, network=network, witness_type=witness_type))      
 
@@ -150,10 +96,7 @@ if __name__ == "__main__":
             list_addresses(k)   
         elif step == 1:
             index = questionary.text("Index: ", validate=lambda text: len(text) > 0 and common.is_int(text)).ask()
-            if coin_name == 'TRX':
-                search_index_trx(k, index, False)
-            else:
-                search_index(k, index, False, True)
+            search_index(k, index, False, True)
         elif step == 2:
             idx, k = choose_account(db_accounts, rows)
         else:

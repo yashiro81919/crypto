@@ -1,6 +1,4 @@
-from tronpy import Tron
-from tronpy.providers import HTTPProvider
-from conf import TRON_USDT_CONTRACT, DB_FILE
+from conf import DB_FILE
 import common, json, questionary, sqlite3
 
 # this script should be deployed on online device for creating transaction data
@@ -46,13 +44,14 @@ def start():
         input_addr = {"address": addr, "balance": str(balance)}
         input_addrs.append(input_addr)
 
-        status = questionary.confirm("Continue add input address: ").ask()
+        status = questionary.confirm("Continue to add input address: ").ask()
         if not status:
             break
 
     while True:
         addr = questionary.text("Type output address: ", validate=lambda text: len(text) > 0).ask()
-        balance = questionary.text("Type amount (no value means all available amount): ", validate=lambda text: len(text) == 0 or common.is_float(text)).ask()
+        balance = questionary.text("Type amount (no value means all available amount): ",
+                                    validate=lambda text: len(text) == 0 or common.is_float(text)).ask()
 
         if balance == "":
             balance = str(round(total_input - total_output, 8)) + fee_str
@@ -71,7 +70,7 @@ def start():
         output_addr = {"address": addr, "balance": balance}
         output_addrs.append(output_addr)
 
-        status = questionary.confirm("Continue add output address: ").ask()
+        status = questionary.confirm("Continue to add output address: ").ask()
         if not status:
             break
 
@@ -112,37 +111,7 @@ def start():
             tx["outputs"].append({"address": change_addr["address"], "amount": get_amount(change_addr), "change": True})
 
         with open(tx_file, 'w') as file:
-            file.write(json.dumps(tx))       
-
-
-def start_trx():
-    type = questionary.select("Choose token you want to send: ", choices=["TRX", "USDT"]).ask()
-    input_addr = questionary.text("Type input address: ", validate=lambda text: len(text) > 0).ask()
-    output_addr = questionary.text("Type output address: ", validate=lambda text: len(text) > 0).ask()
-    amt = questionary.text("Type amount you want to send: ", validate=lambda text: len(text) > 0 and common.is_float(text)).ask()
-    memo = questionary.text("Any memo if you want: ").ask()
-
-    print("----------------------------------")
-    print("Token to be sent: " + type)
-    print("From address: " + input_addr)
-    print("To address: " + output_addr)
-    print("Amount: " + amt)
-    print("Memo: " + memo)
-    print("----------------------------------")
-
-    status = questionary.confirm("Continue to craete transaction: ").ask()
-    if status:
-        api_key = common.get_api_key(c, coin_name)
-        tron_client = Tron(HTTPProvider(api_key=api_key))
-
-        if type == "TRX":
-            tx = tron_client.trx.transfer(input_addr, output_addr, float(amt) * 1_000_000).memo(memo).fee_limit(100_000_000).build()
-        elif type == "USDT":
-            tron_usdt = tron_client.get_contract(TRON_USDT_CONTRACT)
-            tx = tron_usdt.functions.transfer(output_addr, int(float(amt) * 1_000_000)).with_owner(input_addr).fee_limit(5_000_000).build()
-
-        with open(tx_file, 'w') as file:
-            file.write(json.dumps(tx.to_json()))
+            file.write(json.dumps(tx))
 
 
 if __name__ == "__main__":
@@ -150,10 +119,7 @@ if __name__ == "__main__":
     c = conn.cursor()
 
     coin_name = common.choose_coin()   
-    if coin_name == 'TRX':
-        start_trx()
-    else:
-        start()
+    start()
 
     c.close()
     conn.close()
