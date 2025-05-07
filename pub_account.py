@@ -13,7 +13,7 @@ total: float
 def list_addresses(k: HDKey):
     global total
     total = 0
-    c.execute("select * from t_address where name = ?", (account_name,))
+    c.execute("select * from t_address where name = ? and \"using\" = ?", (account_name, 1))
     using_addrs = c.fetchall()
 
     for using_addr in using_addrs:
@@ -60,13 +60,16 @@ def choose_account(db_accounts: list[questionary.Choice], rows: list[any]) -> tu
 
 
 def update_db(i: str, value: float):
-    c.execute("select count(*) from t_address where name = ? and idx = ?", (account_name, int(i)))
+    c.execute("select * from t_address where name = ? and idx = ?", (account_name, int(i)))
     addr_row = c.fetchone()
-    if addr_row[0] == 0 and value > 0:
-        c.execute("insert into t_address (name, idx) values (?, ?)", (account_name, int(i)))
+    if addr_row == None and value > 0:
+        c.execute("insert into t_address (name, idx, \"using\") values (?, ?, ?)", (account_name, int(i), 1))
         conn.commit()
-    elif addr_row[0] > 0 and value == 0:
-        c.execute("delete from t_address where name = ? and idx = ?", (account_name, int(i)))
+    elif addr_row != None and addr_row[2] == 0 and value > 0:
+        c.execute("update t_address set \"using\" = ? where name = ? and idx = ?", (1, account_name, int(i)))
+        conn.commit()     
+    elif addr_row != None and addr_row[2] == 1 and value == 0:
+        c.execute("update t_address set \"using\" = ? where name = ? and idx = ?", (0, account_name, int(i)))
         conn.commit()     
 
 
